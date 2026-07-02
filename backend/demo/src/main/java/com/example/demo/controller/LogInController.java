@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-// 🌟 CHÚ Ý: Đổi origins thành cổng React của em (thường là :3000), bật allowCredentials
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class LogInController {
 

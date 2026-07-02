@@ -24,10 +24,11 @@ function Login() {
                 email: email,
                 password: password
             });
-            alert(response.data);
             if (response.data === "Đăng nhập thành công") navigate("/home");
             else if (response.data === "Tài khoản chưa được kích hoạt, hãy nhập lại mã OTP") {
                 setIsOtpPending(true);
+            } else {
+                alert(response.data);
             }
         } catch (error) {
             console.error(error);

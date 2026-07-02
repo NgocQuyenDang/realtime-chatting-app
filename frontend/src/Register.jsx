@@ -80,7 +80,7 @@ function Register() {
                 ) : (
                     <div className="login-form">
                         <h2 className="form-title">Đăng Ký Tài Khoản</h2>
-                        <p className="form-subtitle">Vui lòng điền đầy đủ các thông tin phía dưới để tham gia WorkSpace</p>
+                        <p className="form-subtitle">Vui lòng điền đầy đủ các thông tin phía dưới để tham gia GoChat</p>
 
                         <input
                             className="login-input"

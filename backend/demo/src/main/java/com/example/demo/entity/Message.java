@@ -18,7 +18,7 @@ public class Message {
     private long id;
 
     @ManyToOne
-    @JoinColumn(name = "channel_id")
+    @JoinColumn(name = "conversation_id")
     private Conversation conversation;
 
     @ManyToOne
