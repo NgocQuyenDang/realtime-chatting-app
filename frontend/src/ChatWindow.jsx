@@ -14,13 +14,6 @@ function ChatWindow() {
         email: "..."
     });
 
-    // Dữ liệu mẫu danh sách lịch sử người dùng cũ bên trái
-    const mockConversations = [
-        { id: 101, name: "Nguyễn Văn A", lastMsg: "Ê tí nữa có đi đá bóng không ông?" },
-        { id: 102, name: "Trần Thị B", lastMsg: "Vâng để em check lại file báo cáo..." },
-        { id: 103, name: "Sếp Tổng Hoàng", lastMsg: "Dự án GoChat chạy đến đâu rồi em?" },
-    ];
-
     // --- CÁC STATE QUẢN LÝ ---
     const [messages, setMessages] = useState([]);
     const [selectedRoom, setSelectedRoom] = useState(null);
@@ -73,9 +66,21 @@ function ChatWindow() {
     };
 
     // Hàm đổi giao diện hộp chat khi bấm chọn người dùng
-    const handleSelectUser = (room) => {
-        setSelectedRoom(room);
-        setMessages(chatHistory[room.id] || []);
+    const handleSelectUser = async (user) => {
+        const response = await axios.post("http://localhost:8080/access", {
+            targetUserId : user.id
+        })
+
+        const conversationId = response.data.id;
+
+        const roomInfo = {
+            id: conversationId,
+            targetUserId: user.id,
+            name: user.name
+        };
+
+        setSelectedRoom(roomInfo);
+        setMessages(chatHistory[conversationId] || []);
         setMessageInput("");
         setSearchKeyword(""); // Bấm xong thì xóa thanh tìm kiếm đi cho gọn
         setSearchResults([]);

@@ -10,10 +10,11 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
-public class ChatService {
+public class ConversationService {
     @Autowired
     private ConversationRepository conversationRepository;
 
@@ -31,6 +32,7 @@ public class ChatService {
         }
         Conversation conversation = new Conversation();
         conversation.setGroup(false);
+        conversation.setCreatedAt(LocalDateTime.now());
 
         Conversation newConversation = conversationRepository.save(conversation);
 
@@ -38,7 +40,7 @@ public class ChatService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng hiện tại"));
         User targetUser = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng đã tìm kiếm"));
-
+        conversation.setName(currentUser.getFullname() + targetUser.getFullname());
         ConversationMember firstUser = new ConversationMember();
         ConversationMember secondUser = new ConversationMember();
 
