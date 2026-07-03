@@ -2,15 +2,13 @@ package com.example.demo.controller;
 
 import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
+import com.example.demo.service.ChatService;
 import com.example.demo.service.JwtTokenProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
@@ -18,7 +16,11 @@ import java.util.Map;
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class HomeController {
     @Autowired UserRepository userRepository;
-    @GetMapping("/home")
+
+    @Autowired
+    ChatService chatService;
+
+    @GetMapping("/user-profile")
     public ResponseEntity<?> getUser(Authentication authentication) {
 
         String email = authentication.getName();
@@ -31,5 +33,10 @@ public class HomeController {
                         "email", user.getEmail()
                 )
         );
+    }
+
+    @PostMapping("/access")
+    public ResponseEntity<?> startConversation(@RequestBody Map<String, Long> request) {
+
     }
 }

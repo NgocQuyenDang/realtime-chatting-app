@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ConversationMemberRepository extends JpaRepository<ConversationMember, Long> {
@@ -14,9 +15,10 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
     List<ConversationMember> findByUserId(long userId);
 
     // Tìm kiếm nguời dùng khác đã nhắn tin với mình bao giờ chưa
-    @Query("SELECT cm1.conversation.id FROM ConversationMember cm1 " +
-            "JOIN ConversationMember cm2 ON cm1.conversation.id = cm2.conversation.id " +
-            "WHERE cm1.user.id = :currentUserId AND cm2.user.id = :targetUserId " +
-            "AND cm1.conversation.isGroup = false")
-    Long findPrivateConversationId(@Param("currentUserId") long currentUserId, @Param("targetUserId") long targetUserId);
+    @Query("SELECT cm.conversation.id FROM ConversationMember cm " +
+            "WHERE cm.user.id IN (:currentUserId, :targetUserId) " +
+            "AND cm.conversation.isGroup = false " +
+            "GROUP BY cm.conversation.id " +
+            "HAVING COUNT(DISTINCT cm.user.id) = 2")
+    Optional<Long> findPrivateConversationId(@Param("currentUserId") long currentUserId, @Param("targetUserId") long targetUserId);
 }

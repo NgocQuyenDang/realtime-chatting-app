@@ -25,7 +25,7 @@ public class SecurityConfig {
         http
             // Tắt CSRF để React gọi API dạng REST mượt mà
             .csrf(csrf -> csrf.disable())
-                .cors(cors ->{})
+                .cors(cors ->cors.configurationSource(corsConfigurationSource()))
             // Phân quyền đường dẫn công khai
             .authorizeHttpRequests(auth -> auth
                 // Cho phép gọi tự do vào các tính năng đăng ký và xác thực

@@ -132,7 +132,7 @@
     font-size: 14px;
     background-color: #f8fafc;
 }
-.input-box-wrapper input:focus { background-color: #ffffff; border-color: var(--primary-color); }
+.input-box-wrapper input:focus { background-color: #ffffff; border-color: var(--primary-color); color: var(--text-main);}
 
 .btn-send-message {
     padding: 0 20px;
@@ -161,6 +161,7 @@
     outline: none;
     box-sizing: border-box;
     background-color: #f8fafc;
+    color: var(--text-main);
 }
 .search-input-wrapper input:focus {
     border-color: var(--primary-color);

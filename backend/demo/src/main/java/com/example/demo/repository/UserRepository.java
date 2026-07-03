@@ -14,6 +14,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
     @Query("SELECT u FROM User u WHERE LOWER(u.fullname) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "AND u.id != :currentUserId AND u.isActive = true")
-    List<User> searchUsers(@Param("keyword") String keyword, @Param("currentUserId") long currentUserId);
+            "AND u.email != :currentUserEmail AND u.isActive = true")
+    List<User> searchUsers(@Param("keyword") String keyword, @Param("currentUserEmail") String currentUserEmail);
 }

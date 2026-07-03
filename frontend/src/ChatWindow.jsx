@@ -5,6 +5,9 @@ import axios from "axios";
 axios.defaults.withCredentials = true;
 
 function ChatWindow() {
+    useEffect(() => {
+        document.title = "GoChat";
+    }, [])
     // Thông tin của bạn (Người dùng đang đăng nhập)
     const [currentUser, setCurrentUser] = useState({
         fullname: "Đang tải...",
@@ -18,37 +21,14 @@ function ChatWindow() {
         { id: 103, name: "Sếp Tổng Hoàng", lastMsg: "Dự án GoChat chạy đến đâu rồi em?" },
     ];
 
-    // Dữ liệu mẫu danh sách kết quả khi tìm kiếm user mới
-    const mockUsersDatabase = [
-        { id: 201, fullname: "Lê Hoàng Long", email: "longlh@gmail.com" },
-        { id: 202, fullname: "Phạm Minh Tuấn", email: "tuanpm@gmail.com" },
-    ];
-
-    // Dữ liệu mẫu lưu lịch sử tin nhắn riêng biệt cho từng người
-    const mockMessagesRepository = {
-        101: [
-            { id: 1, senderId: 2, text: "Chào ông, API đăng nhập xong chưa?", time: "10:25 AM" },
-            { id: 2, senderId: 1, text: "Ngon lành rồi ông ơi.", time: "10:26 AM" },
-            { id: 3, senderId: 2, text: "Ê tí nữa có đi đá bóng không ông?", time: "10:30 AM" },
-        ],
-        102: [
-            { id: 1, senderId: 3, text: "Anh ơi xem hộ em cái giao diện này với.", time: "Hôm qua" },
-            { id: 2, senderId: 1, text: "Giao diện được rồi đó em.", time: "Hôm qua" },
-            { id: 3, senderId: 3, text: "Vâng để em check lại file báo cáo...", time: "Hôm qua" },
-        ],
-        103: [
-            { id: 1, senderId: 4, text: "Tiến độ tuần này thế nào rồi?", time: "28 thg 6" },
-            { id: 2, senderId: 1, text: "Dạ em đang hoàn thiện nốt khung chat.", time: "28 thg 6" },
-            { id: 3, senderId: 4, text: "Dự án GoChat chạy đến đâu rồi em?", time: "28 thg 6" },
-        ]
-    };
-
     // --- CÁC STATE QUẢN LÝ ---
-    const [messages, setMessages] = useState(mockMessagesRepository[101]);
-    const [selectedRoom, setSelectedRoom] = useState(mockConversations[0]);
+    const [messages, setMessages] = useState([]);
+    const [selectedRoom, setSelectedRoom] = useState(null);
     const [messageInput, setMessageInput] = useState("");
+    const [chatHistory, setChatHistory] = useState({});
+    const [conversations, setConversations] = useState([]);
 
-    // Thêm lại State để quản lý từ khóa tìm kiếm và kết quả tìm kiếm
+    //State để quản lý từ khóa tìm kiếm và kết quả tìm kiếm
     const [searchKeyword, setSearchKeyword] = useState("");
     const [searchResults, setSearchResults] = useState([]);
 
@@ -57,7 +37,7 @@ function ChatWindow() {
     useEffect(() => {
         const fetchUserData = async () => {
             try {
-                const response = await axios.get("http://localhost:8080/home");
+                const response = await axios.get("http://localhost:8080/user-profile");
                 setCurrentUser({
                     fullname: response.data.fullname,
                     email: response.data.email,
@@ -74,21 +54,28 @@ function ChatWindow() {
     // Hàm xử lý gõ chữ tìm kiếm user
     const handleSearch = (text) => {
         setSearchKeyword(text);
+
         if (!text.trim()) {
             setSearchResults([]);
             return;
         }
-        // Giả lập lọc danh sách user theo tên từ database mẫu
-        const filtered = mockUsersDatabase.filter(user =>
-            user.fullname.toLowerCase().includes(text.toLowerCase())
-        );
-        setSearchResults(filtered);
+        triggerApiSearch(text);
+    };
+
+    // Hàm này mới là hàm async chịu trách nhiệm gọi API chạy ngầm
+    const triggerApiSearch = async (text) => {
+        try {
+            const response = await axios.get(`http://localhost:8080/home/search?keyword=${text}`);
+            setSearchResults(response.data);
+        } catch (error) {
+            console.error("Lỗi khi kết nối API tìm kiếm:", error);
+        }
     };
 
     // Hàm đổi giao diện hộp chat khi bấm chọn người dùng
     const handleSelectUser = (room) => {
         setSelectedRoom(room);
-        setMessages(mockMessagesRepository[room.id] || []);
+        setMessages(chatHistory[room.id] || []);
         setMessageInput("");
         setSearchKeyword(""); // Bấm xong thì xóa thanh tìm kiếm đi cho gọn
         setSearchResults([]);
@@ -103,11 +90,33 @@ function ChatWindow() {
             text: messageInput,
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
-
+        const updatedMessages = [...messages, newMsg]
         setMessages([...messages, newMsg]);
-        if(mockMessagesRepository[selectedRoom.id]) {
-            mockMessagesRepository[selectedRoom.id].push(newMsg);
+        setChatHistory({
+            ...chatHistory,
+            [selectedRoom.id]: updatedMessages});
+
+        const isExist = conversations.some(chat => chat.id === selectedRoom.id);
+
+        if (!isExist) {
+            // Nếu là người mới từ ô Tìm Kiếm, tạo phòng chat đưa lên ĐẦU danh sách trái
+            const newRoom = {
+                id: selectedRoom.id,
+                name: selectedRoom.name,
+                lastMsg: messageInput // Lấy tin nhắn vừa gõ làm tin nhắn cuối cùng
+            };
+            setConversations([newRoom, ...conversations]);
+        } else {
+            // Nếu đã có sẵn, cập nhật lại nội dung tin nhắn mới nhất
+            const updatedConversations = conversations.map(chat => {
+                if (chat.id === selectedRoom.id) {
+                    return { ...chat, lastMsg: messageInput };
+                }
+                return chat;
+            });
+            setConversations(updatedConversations);
         }
+
         setMessageInput("");
     };
 
@@ -124,14 +133,19 @@ function ChatWindow() {
                     </div>
                 </div>
 
-                {/* 2. THANH TÌM KIẾM ĐÃ QUAY TRỞ LẠI */}
+                {/*THANH TÌM KIẾM*/}
                 <div className="chat-search-container">
                     <div className="search-input-wrapper">
                         <input
                             type="text"
+                            id="search-users"
+                            name="search-users"
                             placeholder="🔍 Tìm kiếm bạn bè mới..."
+                            autoComplete="off"
                             value={searchKeyword}
-                            onChange={(e) => handleSearch(e.target.value)}
+                            onChange={(e) => {
+                                handleSearch(e.target.value);
+                            }}
                         />
                     </div>
                     {/* Kết quả tìm kiếm thả xuống (Dropdown) */}
@@ -155,10 +169,10 @@ function ChatWindow() {
 
                 {/* 3. Danh sách các cuộc hội thoại lịch sử */}
                 <div className="conversations-list">
-                    {mockConversations.map(chat => (
+                    {conversations.map(chat => (
                         <div
                             key={chat.id}
-                            className={`conversation-card ${selectedRoom.id === chat.id ? "active" : ""}`}
+                            className={`conversation-card ${selectedRoom?.id === chat.id ? "active" : ""}`}
                             onClick={() => handleSelectUser(chat)}
                         >
                             <div className="card-body">
@@ -172,42 +186,55 @@ function ChatWindow() {
 
             {/* ====== CỘT 2: MÀN HÌNH CHAT BÊN PHẢI ====== */}
             <main className="chat-main-content">
-                <header className="chat-main-header">
-                    <div className="header-user-info">
-                        <h3>{selectedRoom.name}</h3>
-                    </div>
-                </header>
-
-                <div className="chat-messages-container">
-                    {messages.map((msg) => {
-                        const isMe = msg.senderId === 1;
-                        return (
-                            <div key={msg.id} className={`message-wrapper ${isMe ? "me" : "other"}`}>
-                                <div className="message-block">
-                                    <div className="message-bubble">
-                                        <p>{msg.text}</p>
-                                    </div>
-                                    <span className="message-time">{msg.time}</span>
-                                </div>
+                {selectedRoom ? (
+                    <>
+                        <header className="chat-main-header">
+                            <div className="header-user-info">
+                                <h3>{selectedRoom.name}</h3>
                             </div>
-                        );
-                    })}
-                </div>
+                        </header>
 
-                <footer className="chat-footer-input">
-                    <div className="input-box-wrapper">
-                        <input
-                            type="text"
-                            placeholder={`Nhắn tin cho ${selectedRoom.name}...`}
-                            value={messageInput}
-                            onChange={(e) => setMessageInput(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                        />
-                        <button className="btn-send-message" onClick={handleSendMessage} disabled={!messageInput.trim()}>
-                            <span>Gửi</span> 🚀
-                        </button>
+                        <div className="chat-messages-container">
+                            {messages.length > 0 ? (
+                                messages.map((msg) => {
+                                    const isMe = msg.senderId === 1;
+                                    return (
+                                        <div key={msg.id} className={`message-wrapper ${isMe ? "me" : "other"}`}>
+                                            <div className="message-block">
+                                                <div className="message-bubble">
+                                                    <p>{msg.text}</p>
+                                                </div>
+                                                <span className="message-time">{msg.time}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <div className="no-messages">Chưa có tin nhắn nào. Hãy gửi tin nhắn để bắt đầu cuộc trò chuyện!</div>
+                            )}
+                        </div>
+
+                        <footer className="chat-footer-input">
+                            <div className="input-box-wrapper">
+                                <input
+                                    type="text"
+                                    placeholder={`Nhắn tin cho ${selectedRoom.name}...`}
+                                    value={messageInput}
+                                    onChange={(e) => setMessageInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                                />
+                                <button className="btn-send-message" onClick={handleSendMessage} disabled={!messageInput.trim()}>
+                                    <span>Gửi</span> 🚀
+                                </button>
+                            </div>
+                        </footer>
+                    </>
+                ) : (
+                    <div className="welcome-screen">
+                        <h3>Chào mừng bạn đến với GoChat! 👋</h3>
+                        <p>Hãy chọn một cuộc trò chuyện hoặc tìm kiếm bạn bè mới ở thanh bên trái để bắt đầu nhắn tin.</p>
                     </div>
-                </footer>
+                )}
             </main>
 
         </div>
