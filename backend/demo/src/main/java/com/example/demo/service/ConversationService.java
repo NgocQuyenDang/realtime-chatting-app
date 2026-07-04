@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -40,7 +42,7 @@ public class ConversationService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng hiện tại"));
         User targetUser = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng đã tìm kiếm"));
-        conversation.setName(currentUser.getFullname() + targetUser.getFullname());
+        conversation.setName(currentUser.getFullname() + " - " + targetUser.getFullname());
         ConversationMember firstUser = new ConversationMember();
         ConversationMember secondUser = new ConversationMember();
 
@@ -54,5 +56,9 @@ public class ConversationService {
         memberRepository.save(secondUser);
 
         return newConversation.getId();
+    }
+
+    public List<Map<String, Object>> getConversationsList(Long userId) {
+        return memberRepository.findConversationsListByUserId(userId);
     }
 }

@@ -1,6 +1,9 @@
 package com.example.demo.controller;
 
+import com.example.demo.entity.Conversation;
 import com.example.demo.entity.User;
+import com.example.demo.repository.ConversationMemberRepository;
+import com.example.demo.repository.MessageRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.service.ConversationService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -19,6 +23,12 @@ public class HomeController {
     @Autowired
     ConversationService chatService;
 
+    @Autowired
+    MessageRepository messageRepository;
+
+    @Autowired
+    ConversationMemberRepository conversationMemberRepository;
+
     @GetMapping("/user-profile")
     public ResponseEntity<?> getUser(Authentication authentication) {
 
@@ -28,6 +38,7 @@ public class HomeController {
 
         return ResponseEntity.ok(
                 Map.of(
+                        "id", user.getId(),
                         "fullname", user.getFullname(),
                         "email", user.getEmail()
                 )
@@ -60,5 +71,18 @@ public class HomeController {
         Long conversationId = chatService.getOrCreateConversation(currentUserId, targetUserId);
 
         return ResponseEntity.ok(Map.of("conversationId", conversationId));
+    }
+
+    @GetMapping("/my-conversations")
+    public ResponseEntity<?> getMyConversations(Authentication authentication) {
+        Optional<User> currentUser = userRepository.findByEmail(authentication.getName());
+        if (currentUser.isEmpty()) {
+            return ResponseEntity.status(401).body("Chưa đăng nhập");
+        }
+        Long currentUserId = currentUser.get().getId();
+
+        List<Map<String, Object>> conversations = chatService.getConversationsList(currentUserId);
+
+        return ResponseEntity.ok(conversations);
     }
 }
