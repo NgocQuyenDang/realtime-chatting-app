@@ -52,6 +52,9 @@ public class ConversationService {
         firstUser.setUser(currentUser);
         secondUser.setUser(targetUser);
 
+        firstUser.setJoinedAt(LocalDateTime.now());
+        secondUser.setJoinedAt(LocalDateTime.now());
+
         memberRepository.save(firstUser);
         memberRepository.save(secondUser);
 

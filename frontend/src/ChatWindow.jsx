@@ -82,36 +82,57 @@ function ChatWindow() {
     }, []);
 
     // Hàm đổi giao diện hộp chat khi bấm chọn người dùng
+    // Hàm đổi giao diện hộp chat khi bấm chọn người dùng hoặc phòng chat cũ
     const handleSelectUser = async (user) => {
-        const response = await axios.post("http://localhost:8080/access", {
-            targetUserId : user.id
-        })
-        const conversationId = response.data.conversationId;
-        const msgHistory = await axios.get(`http://localhost:8080/chat-history?conversationId=${conversationId}`);
+        try {
+            let conversationId = null;
+            let targetUserId = null;
 
-        const formattedMessages = msgHistory.data.map(msg => ({
-            id: msg.id,
+            // KIỂM TRA: Nếu object có thuộc tính 'lastMsg' tức là người dùng đang bấm từ danh sách bên trái (phòng đã có sẵn)
+            if (user.hasOwnProperty('lastMsg')) {
+                conversationId = user.id; // Đối với danh sách bên trái, user.id chính là conversationId
+                targetUserId = user.targetUserId || null; // Nếu backend chưa trả về targetUserId thì tạm thời để null
+            } else {
+                // Ngược lại, nếu bấm từ ô Tìm kiếm (chưa có phòng), bắt buộc phải gọi API /access để lấy/tạo phòng
+                const response = await axios.post("http://localhost:8080/access", {
+                    targetUserId: user.id // user.id từ ô tìm kiếm chính là ID của người nhận
+                });
+                conversationId = response.data.conversationId;
+                targetUserId = user.id;
+            }
 
-            senderId: msg.user?.id,
+            // Gọi API lấy lịch sử nhắn tin bằng conversationId đã xác định ở trên
+            const msgHistory = await axios.get(`http://localhost:8080/chat-history?conversationId=${conversationId}`);
 
-            text: msg.content,
+            const formattedMessages = msgHistory.data.map(msg => ({
+                id: msg.id,
+                senderId: msg.user?.id,
+                text: msg.content,
+                time: msg.createdAt
+                    ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }));
 
-            time: msg.createdAt
-                ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }));
+            const roomInfo = {
+                id: conversationId,
+                targetUserId: targetUserId,
+                name: user.name
+            };
 
-        const roomInfo = {
-            id: conversationId,
-            targetUserId: user.id,
-            name: user.name
-        };
+            setSelectedRoom(roomInfo);
+            setMessages(formattedMessages);
+            setMessageInput("");
+            setSearchKeyword(""); // Bấm xong thì xóa thanh tìm kiếm đi cho gọn
+            setSearchResults([]);
 
-        setSelectedRoom(roomInfo);
-        setMessages(formattedMessages);
-        setMessageInput("");
-        setSearchKeyword(""); // Bấm xong thì xóa thanh tìm kiếm đi cho gọn
-        setSearchResults([]);
+        } catch (error) {
+            console.error("Lỗi khi kết nối phòng chat:", error);
+            if (error.response) {
+                alert("Lỗi từ hệ thống: " + error.response.data);
+            } else {
+                alert("Không thể kết nối đến máy chủ.");
+            }
+        }
     };
 
     const handleSendMessage = async () => {
