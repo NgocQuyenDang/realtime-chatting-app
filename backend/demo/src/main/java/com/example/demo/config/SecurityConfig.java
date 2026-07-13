@@ -23,15 +23,16 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // Tắt CSRF để React gọi API dạng REST mượt mà
-            .csrf(csrf -> csrf.disable())
+                // Tắt CSRF để React gọi API dạng REST mượt mà
+                .csrf(csrf -> csrf.disable())
                 .cors(cors ->cors.configurationSource(corsConfigurationSource()))
-            // Phân quyền đường dẫn công khai
-            .authorizeHttpRequests(auth -> auth
-                // Cho phép gọi tự do vào các tính năng đăng ký và xác thực
-                .requestMatchers("/register", "/verify-otp", "/login", "/resend-otp").permitAll()
-                
-                // Các tính năng khác sau này làm (như xem data, update) thì phải đăng nhập
+
+                // Phân quyền đường dẫn công khai
+                .authorizeHttpRequests(auth -> auth
+                    // Cho phép gọi tự do vào các tính năng đăng ký và xác thực
+                    .requestMatchers("/register", "/verify-otp", "/login", "/resend-otp").permitAll()
+                    .requestMatchers("/ws-chat/**").permitAll()
+                    // Các tính năng khác sau này làm (như xem data, update) thì phải đăng nhập
                 .anyRequest().authenticated()
             ).addFilterBefore(
                         jwtAuthenticationFilter,

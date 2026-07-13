@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-public class SendMessageService {
+public class MessageService {
     @Autowired
     private MessageRepository messageRepository;
 

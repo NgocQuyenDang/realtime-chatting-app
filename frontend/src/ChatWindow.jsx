@@ -1,6 +1,8 @@
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import "./ChatWindow.css";
 import axios from "axios";
+import SockJS from 'sockjs-client';
+import Stomp from 'stompjs';
 
 axios.defaults.withCredentials = true;
 
@@ -26,27 +28,7 @@ function ChatWindow() {
     const [searchKeyword, setSearchKeyword] = useState("");
     const [searchResults, setSearchResults] = useState([]);
 
-
-    // Hàm xử lý gõ chữ tìm kiếm user
-    const handleSearch = (text) => {
-        setSearchKeyword(text);
-
-        if (!text.trim()) {
-            setSearchResults([]);
-            return;
-        }
-        triggerApiSearch(text);
-    };
-
-    // Hàm chịu trách nhiệm gọi API chạy ngầm
-    const triggerApiSearch = async (text) => {
-        try {
-            const response = await axios.get(`http://localhost:8080/home/search?keyword=${text}`);
-            setSearchResults(response.data);
-        } catch (error) {
-            console.error("Lỗi khi kết nối API tìm kiếm:", error);
-        }
-    };
+    let stompClient = useRef(null);
 
     useEffect(() => {
         const fetchUserDataAndConversations = async () => {
@@ -81,6 +63,27 @@ function ChatWindow() {
         fetchUserDataAndConversations();
     }, []);
 
+    // Hàm xử lý gõ chữ tìm kiếm user
+    const handleSearch = (text) => {
+        setSearchKeyword(text);
+
+        if (!text.trim()) {
+            setSearchResults([]);
+            return;
+        }
+        triggerApiSearch(text);
+    };
+
+    // Hàm chịu trách nhiệm gọi API chạy ngầm
+    const triggerApiSearch = async (text) => {
+        try {
+            const response = await axios.get(`http://localhost:8080/home/search?keyword=${text}`);
+            setSearchResults(response.data);
+        } catch (error) {
+            console.error("Lỗi khi kết nối API tìm kiếm:", error);
+        }
+    };
+
     // Hàm đổi giao diện hộp chat khi bấm chọn người dùng
     // Hàm đổi giao diện hộp chat khi bấm chọn người dùng hoặc phòng chat cũ
     const handleSelectUser = async (user) => {
@@ -89,7 +92,7 @@ function ChatWindow() {
             let targetUserId = null;
 
             // KIỂM TRA: Nếu object có thuộc tính 'lastMsg' tức là người dùng đang bấm từ danh sách bên trái (phòng đã có sẵn)
-            if (user.hasOwnProperty('lastMsg')) {
+            if (Object.prototype.hasOwnProperty.call(user, 'lastMsg')) {
                 conversationId = user.id; // Đối với danh sách bên trái, user.id chính là conversationId
                 targetUserId = user.targetUserId || null; // Nếu backend chưa trả về targetUserId thì tạm thời để null
             } else {
@@ -138,35 +141,41 @@ function ChatWindow() {
     const handleSendMessage = async () => {
         if (!messageInput.trim() || !selectedRoom) return;
 
-        const currentText = messageInput;
+        const messagePayload = {
+            senderId : currentUserId,
+            content : messageInput.trim()
+        };
+        stompClient.current.send(`/app/chat/${selectedRoom.id}`, {}, JSON.stringify(messagePayload));
+
         setMessageInput("");
-
-        try {
-            const response = await axios.post("http://localhost:8080/chat", {
-                conversationId: selectedRoom.id,
-                senderId: currentUserId,
-                content: currentText,
-            });
-            const savedMsg = response.data;
-
-            const newMsg = {
-                id: savedMsg.id,
-                senderId: currentUserId,
-                text: savedMsg.content,
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            };
-            const updatedMessages = [...messages, newMsg];
-            setMessages(updatedMessages);
-        }
-        catch (error) {
-            console.error("Lỗi khi gửi tin nhắn:", error);
-            alert("Không thể gửi tin nhắn. Vui lòng thử lại!");
-            // Nếu lỗi xảy ra, có thể khôi phục lại chữ trong ô nhập liệu cho user nếu muốn
-            setMessageInput(currentText);
-        }
-
-
     };
+
+    useEffect(() => {
+        if (!selectedRoom) return;
+
+        const socket = new SockJS('http://localhost:8080/ws-chat');
+        const client = Stomp.over(socket);
+
+        client.connect({}, () => {
+            // 2. Lắng nghe đường truyền riêng của phòng chat này
+            client.subscribe(`/topic/room/${selectedRoom.id}`, (response) => {
+                const rawMsg = JSON.parse(response.body);
+
+                const newIncomingMsg = {
+                    id: rawMsg.id,
+                    senderId: rawMsg.senderId,
+                    text: rawMsg.text,
+                    time: rawMsg.time
+                };
+
+                setMessages((prev) => [...prev, newIncomingMsg]);
+            });
+        });
+        stompClient.current = client;
+        return () => {
+            if (stompClient.current) stompClient.current.disconnect();
+        };
+    }, [selectedRoom]);
 
     return (
         <div className="chat-app-wrapper">

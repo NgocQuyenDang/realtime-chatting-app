@@ -22,7 +22,7 @@ public class JwtTokenProvider {
     }
 
     /**
-     * 🖨️ HÀM TẠO TOKEN (Khi đăng nhập thành công)
+     * HÀM TẠO TOKEN (Khi đăng nhập thành công)
      */
     public String generateToken(User user) {
         Date now = new Date();
