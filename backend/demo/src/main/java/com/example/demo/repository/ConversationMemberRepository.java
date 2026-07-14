@@ -12,8 +12,8 @@ import java.util.Optional;
 
 @Repository
 public interface ConversationMemberRepository extends JpaRepository<ConversationMember, Long> {
-    // Lấy các cuộc hội thoại thuộc về User hiện tại
-    List<ConversationMember> findByUserId(long userId);
+//    // Lấy các cuộc hội thoại thuộc về User hiện tại
+//    List<ConversationMember> findByUserId(long userId);
 
     // Tìm kiếm nguời dùng khác đã nhắn tin với mình bao giờ chưa
     @Query("SELECT cm.conversation.id FROM ConversationMember cm " +

@@ -10,7 +10,7 @@ function ChatWindow() {
     useEffect(() => {
         document.title = "GoChat";
     }, [])
-    // Thông tin của bạn (Người dùng đang đăng nhập)
+    // Thông tin người dùng đang đăng nhập)
     const [currentUser, setCurrentUser] = useState({
         fullname: "Đang tải...",
         email: "..."
@@ -21,7 +21,6 @@ function ChatWindow() {
     const [messages, setMessages] = useState([]);
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [messageInput, setMessageInput] = useState("");
-    const [chatHistory, setChatHistory] = useState({});
     const [conversations, setConversations] = useState([]);
 
     //State để quản lý từ khóa tìm kiếm và kết quả tìm kiếm
@@ -46,8 +45,8 @@ function ChatWindow() {
 
                 // Map dữ liệu từ Backend trả về sao cho khớp với các trường hiển thị của cột bên trái
                 const formattedConversations = convResponse.data.map(conv => ({
-                    id: conv.conversationId, // ID của phòng chat
-                    name: conv.name,         // Tên người kia (hoặc tên nhóm)
+                    conversationId: conv.conversationId, // ID của phòng chat
+                    targetUserName: conv.name,         // Tên người kia (hoặc tên nhóm)
                     lastMsg: conv.lastMsg || "Chưa có tin nhắn nào" // Tin nhắn cuối cùng để xem trước
                 }));
 
@@ -74,7 +73,7 @@ function ChatWindow() {
         triggerApiSearch(text);
     };
 
-    // Hàm chịu trách nhiệm gọi API chạy ngầm
+    // Hàm gọi API chạy ngầm
     const triggerApiSearch = async (text) => {
         try {
             const response = await axios.get(`http://localhost:8080/home/search?keyword=${text}`);
@@ -91,29 +90,25 @@ function ChatWindow() {
             let conversationId = null;
             let targetUserId = null;
 
-            // KIỂM TRA: Nếu object có thuộc tính 'lastMsg' tức là người dùng đang bấm từ danh sách bên trái (phòng đã có sẵn)
-            if (Object.prototype.hasOwnProperty.call(user, 'lastMsg')) {
-                conversationId = user.id; // Đối với danh sách bên trái, user.id chính là conversationId
-                targetUserId = user.targetUserId || null; // Nếu backend chưa trả về targetUserId thì tạm thời để null
-            } else {
-                // Ngược lại, nếu bấm từ ô Tìm kiếm (chưa có phòng), bắt buộc phải gọi API /access để lấy/tạo phòng
+            if (user.fullname) {
                 const response = await axios.post("http://localhost:8080/access", {
-                    targetUserId: user.id // user.id từ ô tìm kiếm chính là ID của người nhận
+                    targetUserId: user.id
                 });
                 conversationId = response.data.conversationId;
                 targetUserId = user.id;
+            } else {
+                conversationId = user.id;
+                targetUserId = user.targetUserId || null;
             }
 
             // Gọi API lấy lịch sử nhắn tin bằng conversationId đã xác định ở trên
             const msgHistory = await axios.get(`http://localhost:8080/chat-history?conversationId=${conversationId}`);
 
             const formattedMessages = msgHistory.data.map(msg => ({
-                id: msg.id,
-                senderId: msg.user?.id,
-                text: msg.content,
-                time: msg.createdAt
-                    ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                    : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    id : msg.id,
+                    senderId: Number(msg.senderId),
+                    text : msg.content,
+                    time: msg.time
             }));
 
             const roomInfo = {
@@ -142,7 +137,6 @@ function ChatWindow() {
         if (!messageInput.trim() || !selectedRoom) return;
 
         const messagePayload = {
-            senderId : currentUserId,
             content : messageInput.trim()
         };
         stompClient.current.send(`/app/chat/${selectedRoom.id}`, {}, JSON.stringify(messagePayload));
@@ -210,7 +204,7 @@ function ChatWindow() {
                         <div className="search-dropdown">
                             {searchResults.length > 0 ? (
                                 searchResults.map(user => (
-                                    <div key={user.id} className="search-user-item" onClick={() => handleSelectUser({ id: user.id, name: user.fullname, lastMsg: "Bắt đầu cuộc trò chuyện mới" })}>
+                                    <div key={user.id} className="search-user-item" onClick={() => handleSelectUser(user)}>
                                         <div className="search-user-info">
                                             <p>{user.fullname}</p>
                                             <span>{user.email}</span>
@@ -228,12 +222,12 @@ function ChatWindow() {
                 <div className="conversations-list">
                     {conversations.map(chat => (
                         <div
-                            key={chat.id}
-                            className={`conversation-card ${selectedRoom?.id === chat.id ? "active" : ""}`}
+                            key={chat.conversationId}
+                            className={`conversation-card ${selectedRoom?.id === chat.conversationId? "active" : ""}`}
                             onClick={() => handleSelectUser(chat)}
                         >
                             <div className="card-body">
-                                <span className="room-name">{chat.name}</span>
+                                <span className="room-name">{chat.targetUserName}</span>
                                 <span className="room-preview-text">{chat.lastMsg}</span>
                             </div>
                         </div>

@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import com.example.demo.dto.MessageHistoryResponse;
 import com.example.demo.entity.Conversation;
 import com.example.demo.entity.Message;
 import com.example.demo.repository.ConversationRepository;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Service
@@ -38,7 +40,18 @@ public class MessageService {
     }
 
     @Transactional(readOnly = true)
-    public List<Message> getMessageHistory(Long conversationId) {
-        return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId);
+    public List<MessageHistoryResponse> getMessageHistory(Long conversationId) {
+
+        return messageRepository
+                .findByConversationIdOrderByCreatedAtAsc(conversationId)
+                .stream()
+                .map(message -> new MessageHistoryResponse(
+                        message.getId(),
+                        message.getUser().getId(),
+                        message.getContent(),
+                        message.getCreatedAt()
+                                .format(DateTimeFormatter.ofPattern("HH:mm"))
+                ))
+                .toList();
     }
 }
