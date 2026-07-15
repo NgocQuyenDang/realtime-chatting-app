@@ -192,3 +192,12 @@
 .search-user-item p { margin: 0; font-size: 13px; font-weight: 600; }
 .search-user-item span { font-size: 11px; color: var(--text-muted); }
 .no-result { padding: 10px; text-align: center; font-size: 12px; color: var(--text-muted); }
+
+.unread-dot {
+    width: 10px;
+    height: 10px;
+    background-color: #ff4d4f;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 15px;
+}

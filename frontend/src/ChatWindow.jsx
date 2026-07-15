@@ -46,8 +46,9 @@ function ChatWindow() {
                 // Map dữ liệu từ Backend trả về sao cho khớp với các trường hiển thị của cột bên trái
                 const formattedConversations = convResponse.data.map(conv => ({
                     conversationId: conv.conversationId, // ID của phòng chat
-                    targetUserName: conv.name,         // Tên người kia (hoặc tên nhóm)
-                    lastMsg: conv.lastMsg || "Chưa có tin nhắn nào" // Tin nhắn cuối cùng để xem trước
+                    targetUserName: conv.name,         // Tên người kia
+                    lastMsg: conv.lastMsg || "Chưa có tin nhắn nào",
+                    isUnread: false
                 }));
 
                 // Cập nhật vào state conversations để ra danh sách bên trái
@@ -97,9 +98,12 @@ function ChatWindow() {
                 conversationId = response.data.conversationId;
                 targetUserId = user.id;
             } else {
-                conversationId = user.id;
+                conversationId = user.conversationId;
                 targetUserId = user.targetUserId || null;
             }
+            setConversations(prev =>
+                prev.map(c => c.conversationId === conversationId ? { ...c, isUnread: false } : c)
+            );
 
             // Gọi API lấy lịch sử nhắn tin bằng conversationId đã xác định ở trên
             const msgHistory = await axios.get(`http://localhost:8080/chat-history?conversationId=${conversationId}`);
@@ -114,7 +118,7 @@ function ChatWindow() {
             const roomInfo = {
                 id: conversationId,
                 targetUserId: targetUserId,
-                name: user.name
+                name: user.targetUserName || user.fullname
             };
 
             setSelectedRoom(roomInfo);
@@ -163,6 +167,41 @@ function ChatWindow() {
                 };
 
                 setMessages((prev) => [...prev, newIncomingMsg]);
+                setConversations((prevConversations) => {
+                    // Tìm xem phòng này đã có trong danh sách bên trái chưa
+                    const existingIndex = prevConversations.findIndex(c => c.conversationId === selectedRoom.id);
+                    let updatedConversations = [...prevConversations];
+
+                    // Kiểm tra xem tin nhắn này có phải của người khác gửi đến hay không
+                    const isFromOther = rawMsg.senderId !== currentUserId;
+
+                    if (existingIndex !== -1) {
+                        // Nếu phòng đã tồn tại sẵn bên trái
+                        const targetConv = { ...updatedConversations[existingIndex] };
+                        targetConv.lastMsg = rawMsg.text; // Cập nhật tin nhắn mới nhất
+
+                        // Nếu người gửi là người khác, chuyển trạng thái chưa đọc thành true
+                        if (isFromOther) {
+                            targetConv.isUnread = true;
+                        }
+
+                        // Xóa khỏi vị trí cũ và đẩy lên đầu mảng
+                        updatedConversations.splice(existingIndex, 1);
+                        updatedConversations.unshift(targetConv);
+                    } else {
+                        // Nếu đây là cuộc trò chuyện mới
+                        const newConv = {
+                            conversationId: selectedRoom.id,
+                            targetUserName: selectedRoom.name,
+                            lastMsg: rawMsg.text,
+                            isUnread: isFromOther // Nếu người khác gửi tin đầu tiên thì báo đỏ luôn
+                        };
+                        updatedConversations.unshift(newConv);
+                    }
+                    // Phòng nào chưa đọc xếp lên trên cùng
+                    return updatedConversations.sort((a, b) => b.isUnread - a.isUnread);
+
+                })
             });
         });
         stompClient.current = client;
@@ -230,6 +269,7 @@ function ChatWindow() {
                                 <span className="room-name">{chat.targetUserName}</span>
                                 <span className="room-preview-text">{chat.lastMsg}</span>
                             </div>
+                            {chat.isUnread && <span className="unread-dot"></span>}
                         </div>
                     ))}
                 </div>
