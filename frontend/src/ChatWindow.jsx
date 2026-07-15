@@ -46,7 +46,7 @@ function ChatWindow() {
                 // Map dữ liệu từ Backend trả về sao cho khớp với các trường hiển thị của cột bên trái
                 const formattedConversations = convResponse.data.map(conv => ({
                     conversationId: conv.conversationId, // ID của phòng chat
-                    targetUserName: conv.name,         // Tên người kia
+                    targetUserName: conv.conversationName,         // Tên người kia
                     lastMsg: conv.lastMsg || "Chưa có tin nhắn nào",
                     isUnread: false
                 }));

@@ -1,5 +1,7 @@
 package com.example.demo.repository;
 
+import com.example.demo.dto.response.ConversationListResponse;
+import com.example.demo.dto.response.IConversationListResponse;
 import com.example.demo.entity.ConversationMember;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -30,5 +32,6 @@ public interface ConversationMemberRepository extends JpaRepository<Conversation
             "JOIN conversationmember partner ON cm.conversation_id = partner.conversation_id AND partner.user_id <> :userId " +
             "JOIN user u ON partner.user_id = u.user_id " +
             "WHERE cm.user_id = :userId", nativeQuery = true)
-    List<Map<String, Object>> findConversationsListByUserId(@Param("userId") Long userId);
+    List<IConversationListResponse> findConversationsListByUserId(@Param("userId") Long userId);
+// Đổi Class thành Interface 👆
 }

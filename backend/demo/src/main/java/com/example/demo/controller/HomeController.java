@@ -1,5 +1,7 @@
 package com.example.demo.controller;
 
+import com.example.demo.dto.response.ConversationListResponse;
+import com.example.demo.dto.response.UserProfileResponse;
 import com.example.demo.entity.Conversation;
 import com.example.demo.entity.User;
 import com.example.demo.repository.ConversationMemberRepository;
@@ -24,18 +26,16 @@ public class HomeController {
     private final ConversationService conversationService;
 
     @GetMapping("/user-profile")
-    public ResponseEntity<?> getUser(Authentication authentication) {
+    public UserProfileResponse getUserProfile(Authentication authentication) {
 
         String email = authentication.getName();
 
         User user = userRepository.findByEmail(email).orElse(null);
 
-        return ResponseEntity.ok(
-                Map.of(
-                        "id", user.getId(),
-                        "fullname", user.getFullname(),
-                        "email", user.getEmail()
-                )
+        return new UserProfileResponse(
+                user.getId(),
+                user.getFullname(),
+                user.getEmail()
         );
     }
 
@@ -75,7 +75,7 @@ public class HomeController {
         }
         Long currentUserId = currentUser.get().getId();
 
-        List<Map<String, Object>> conversations = conversationService.getConversationsList(currentUserId);
+        List<ConversationListResponse> conversations = conversationService.getConversationsList(currentUserId);
 
         return ResponseEntity.ok(conversations);
     }

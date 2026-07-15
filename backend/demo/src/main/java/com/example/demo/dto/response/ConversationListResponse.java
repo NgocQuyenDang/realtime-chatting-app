@@ -5,10 +5,11 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
-public class ConversationResponse {
-
+@AllArgsConstructor
+public class ConversationListResponse {
     private Long conversationId;
-
+    private String conversationName;
+    private String lastMsg;
+    private Boolean isGroup;
 }

@@ -1,30 +1,27 @@
 package com.example.demo.service;
 
+import com.example.demo.dto.response.ConversationListResponse;
 import com.example.demo.entity.Conversation;
 import com.example.demo.entity.ConversationMember;
 import com.example.demo.entity.User;
 import com.example.demo.repository.ConversationMemberRepository;
 import com.example.demo.repository.ConversationRepository;
 import com.example.demo.repository.UserRepository;
-import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import lombok.RequiredArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class ConversationService {
-    @Autowired
-    private ConversationRepository conversationRepository;
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private ConversationMemberRepository memberRepository;
+    private final ConversationRepository conversationRepository;
+    private final UserRepository userRepository;
+    private final ConversationMemberRepository memberRepository;
 
     @Transactional
     public Long getOrCreateConversation(long currentUserId, long targetUserId) {
@@ -32,36 +29,47 @@ public class ConversationService {
         if (existingId.isPresent()) {
             return existingId.get();
         }
-        Conversation conversation = new Conversation();
-        conversation.setGroup(false);
-        conversation.setCreatedAt(LocalDateTime.now());
-
-        Conversation newConversation = conversationRepository.save(conversation);
 
         User currentUser = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng hiện tại"));
         User targetUser = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng đã tìm kiếm"));
+
+        Conversation conversation = new Conversation();
+        conversation.setGroup(false);
         conversation.setName(currentUser.getFullname() + " - " + targetUser.getFullname());
-        ConversationMember firstUser = new ConversationMember();
-        ConversationMember secondUser = new ConversationMember();
+        conversation.setCreatedAt(LocalDateTime.now());
 
-        firstUser.setConversation(newConversation);
-        secondUser.setConversation(newConversation);
+        Conversation savedConversation = conversationRepository.save(conversation);
 
-        firstUser.setUser(currentUser);
-        secondUser.setUser(targetUser);
+        ConversationMember currentMember = createConversationMember(savedConversation, currentUser);
+        ConversationMember targetMember = createConversationMember(savedConversation, targetUser);
 
-        firstUser.setJoinedAt(LocalDateTime.now());
-        secondUser.setJoinedAt(LocalDateTime.now());
+        memberRepository.save(currentMember);
+        memberRepository.save(targetMember);
 
-        memberRepository.save(firstUser);
-        memberRepository.save(secondUser);
-
-        return newConversation.getId();
+        return savedConversation.getId();
     }
 
-    public List<Map<String, Object>> getConversationsList(Long userId) {
-        return memberRepository.findConversationsListByUserId(userId);
+    @Transactional(readOnly = true)
+    public List<ConversationListResponse> getConversationsList(Long userId) {
+        // Gọi repo lấy ra danh sách Interface
+        List<com.example.demo.dto.response.IConversationListResponse> rawList = memberRepository.findConversationsListByUserId(userId);
+
+        // Map ngược lại Class DTO cũ để trả về cho Controller
+        return rawList.stream().map(item -> new ConversationListResponse(
+                item.getConversationId(),
+                item.getName(),
+                item.getLastMsg(),
+                false
+        )).toList();
+    }
+
+    private ConversationMember createConversationMember(Conversation conversation, User user) {
+        ConversationMember member = new ConversationMember();
+        member.setConversation(conversation);
+        member.setUser(user);
+        member.setJoinedAt(LocalDateTime.now());
+        return member;
     }
 }

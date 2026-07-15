@@ -3,6 +3,7 @@ package com.example.demo.service;
 import com.example.demo.dto.response.MessageHistoryResponse;
 import com.example.demo.entity.Conversation;
 import com.example.demo.entity.Message;
+import com.example.demo.entity.User;
 import com.example.demo.repository.ConversationRepository;
 import com.example.demo.repository.MessageRepository;
 import com.example.demo.repository.UserRepository;
@@ -29,9 +30,12 @@ public class MessageService {
     public Message saveMessage(Long conversationId, Long senderId, String content) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy cuộc hội thoại!"));
-        Message message = new Message();
 
-        message.setUser(userRepository.findById(senderId).get());
+        User sender = userRepository.findById(senderId)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy người gửi!"));
+
+        Message message = new Message();
+        message.setUser(sender);
         message.setConversation(conversation);
         message.setContent(content);
         message.setCreatedAt(LocalDateTime.now());

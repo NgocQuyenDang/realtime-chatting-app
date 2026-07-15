@@ -2,47 +2,37 @@ package com.example.demo.service;
 
 import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Random;
 
 @Service
+@RequiredArgsConstructor
 public class RegisterService {
-    @Autowired
-    private JavaMailSender  mailSender;
+    private final JavaMailSender mailSender;
+    private final BCryptPasswordEncoder encoder;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private BCryptPasswordEncoder encoder;
-
-    @Autowired
-    private UserRepository userRepository;
-
+    private final SecureRandom secureRandom = new SecureRandom();
 
     public String registerRequest(String email, String password, String fullname) {
         Optional<User> user = userRepository.findByEmail(email);
         if (user.isPresent()) {
             if (user.get().isActive()) {
-                return "Người dùng này đã đăng kí, hãy quay lại để đăng nhập";
+                throw new RuntimeException("Người dùng đã tồn tại, quay lại để đăng nhập");
             }
-            return "Tài khoản của bạn đang chờ kích hoạt. Vui lòng kiểm tra email để nhập mã OTP hoặc bấm gửi lại mã.";
+            throw new RuntimeException("\"Tài khoản của bạn đang chờ kích hoạt. Vui lòng kiểm tra email để nhập mã OTP hoặc bấm gửi lại mã.\"");
         }
-        String otpCode = String.format("%06d", new Random().nextInt(999999));
-        LocalDateTime expiryTime = LocalDateTime.now().plusMinutes(5);
-
-        User newUser = new User();
-        newUser.setEmail(email);
-        newUser.setPassword(encoder.encode(password));
-        newUser.setFullname(fullname);
-        newUser.setOtp(otpCode);
-        newUser.setCreatedAt(LocalDateTime.now());
-        newUser.setOtpExpiredAt(expiryTime);
-        newUser.setActive(false);
+        String otpCode = generateOtp();
+        User newUser = createInactiveUser(email, password, fullname, otpCode);
 
         userRepository.save(newUser);
         sendOtp(email, otpCode);
@@ -51,21 +41,20 @@ public class RegisterService {
     }
 
     public String verifyOtp(String email, String otpInput) {
-        Optional<User> user = userRepository.findByEmail(email);
-        if (user.isEmpty()) {
-            return "Không tìm thấy email đăng kí, hãy đăng kí lại";
+        User user = getUserByEmail(email);
+
+        if (user.getOtpExpiredAt() == null || LocalDateTime.now().isAfter(user.getOtpExpiredAt())) {
+            throw new RuntimeException("Mã OTP đã hết hạn, hãy yêu cầu gửi lại");
         }
-        User currentUser = user.get();
-        if (LocalDateTime.now().isAfter(currentUser.getOtpExpiredAt())) {
-            return "Mã OTP đã hết hạn, hãy yêu cầu gửi lại";
+
+        if (!user.getOtp().equals(otpInput)) {
+            throw new RuntimeException("Mã OTP không chính xác");
         }
-        if (!currentUser.getOtp().equals(otpInput)) {
-            return "Mã OTP không chính xác";
-        }
-        currentUser.setActive(true);
-        currentUser.setOtp(null);
-        currentUser.setOtpExpiredAt(null);
-        userRepository.save(currentUser);
+
+        user.setActive(true);
+        user.setOtp(null);
+        user.setOtpExpiredAt(null);
+        userRepository.save(user);
 
         return "Đăng kí thành công";
     }
@@ -93,7 +82,7 @@ public class RegisterService {
             return "Vui lòng đợi 1 phút trước khi yêu cầu gửi lại mã mới!";
         }
 
-        String newOtp = String.format("%06d", new Random().nextInt(999999));
+        String newOtp = generateOtp();
         user.setOtp(newOtp);
         user.setOtpExpiredAt(LocalDateTime.now().plusMinutes(5));
         userRepository.save(user);
@@ -101,5 +90,34 @@ public class RegisterService {
         // Gửi mail lại
         sendOtp(email, newOtp);
         return "Mã OTP mới đã được gửi vào hòm thư của bạn!";
+    }
+
+    private String generateOtp() {
+        return String.format("%06d", secureRandom.nextInt(1_000_000));
+    }
+
+    private User getUserByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new RuntimeException("Không tìm thấy email"));
+    }
+
+    private User createInactiveUser(
+            String email,
+            String password,
+            String fullname,
+            String otp) {
+
+        User user = new User();
+
+        user.setEmail(email);
+        user.setPassword(encoder.encode(password));
+        user.setFullname(fullname);
+        user.setOtp(otp);
+        user.setCreatedAt(LocalDateTime.now());
+        user.setOtpExpiredAt(LocalDateTime.now().plusMinutes(5));
+        user.setActive(false);
+
+        return user;
     }
 }

@@ -24,7 +24,7 @@ function Login() {
                 email: email,
                 password: password
             });
-            if (response.data === "Đăng nhập thành công") navigate("/home");
+            if (response.data?.message === "Đăng nhập thành công") navigate("/home");
             else if (response.data === "Tài khoản chưa được kích hoạt, hãy nhập lại mã OTP") {
                 setIsOtpPending(true);
             } else {
@@ -32,7 +32,7 @@ function Login() {
             }
         } catch (error) {
             console.error(error);
-            alert("Có lỗi xảy ra, vui lòng thử lại!");
+            alert("Có lỗi xảy ra, vui lòng nhập chính xác thông tin đăng nhập");
         }
     };
 
