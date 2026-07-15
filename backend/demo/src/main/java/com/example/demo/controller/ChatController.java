@@ -1,8 +1,8 @@
 package com.example.demo.controller;
 
-import com.example.demo.dto.ChatMessageRequest;
-import com.example.demo.dto.ChatMessageResponse;
-import com.example.demo.dto.MessageHistoryResponse;
+import com.example.demo.dto.request.ChatMessageRequest;
+import com.example.demo.dto.response.ChatMessageResponse;
+import com.example.demo.dto.response.MessageHistoryResponse;
 import com.example.demo.entity.Message;
 import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
@@ -25,8 +25,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ChatController {
 
-    private final MessageService messageService;
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
+    private final MessageService messageService;
     private final UserRepository userRepository;
 
     @MessageMapping("/chat/{roomId}")
@@ -51,8 +52,7 @@ public class ChatController {
                 savedMessage.getId(),
                 user.getId(),
                 savedMessage.getContent(),
-                savedMessage.getCreatedAt()
-                        .format(DateTimeFormatter.ofPattern("HH:mm"))
+                savedMessage.getCreatedAt().format(TIME_FORMATTER)
         );
     }
 

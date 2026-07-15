@@ -1,6 +1,5 @@
-package com.example.demo.dto;
+package com.example.demo.dto.response;
 
-import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,8 +7,10 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class ChatMessageRequest {
+public class MessageHistoryResponse {
 
-    @NotBlank
+    private Long id;
+    private Long senderId;
     private String content;
+    private String time;
 }

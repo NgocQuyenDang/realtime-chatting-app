@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Entity
 @Table(name = "user")
@@ -33,6 +34,5 @@ public class User {
 
     @Column(name = "is_active")
     private boolean isActive = false;
-
 
 }

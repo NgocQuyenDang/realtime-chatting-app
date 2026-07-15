@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.service.RegisterService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,9 +10,9 @@ import java.util.Random;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
+@RequiredArgsConstructor
 public class RegisterController {
-    @Autowired
-    private RegisterService registerService;
+    private final RegisterService registerService;
 
     @PostMapping("/register")
     public String registerRequest(@RequestBody Map<String,String> request){

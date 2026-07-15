@@ -6,23 +6,21 @@ import com.example.demo.service.JwtTokenProvider;
 import com.example.demo.service.LoginService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
+@RequiredArgsConstructor
 public class LogInController {
 
-    @Autowired
-    private LoginService loginService;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private JwtTokenProvider jwtTokenProvider;
+    private final LoginService loginService;
+    private final UserRepository userRepository;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/login")
     public String logInRequest(@RequestBody Map<String, String> request, HttpServletResponse response) {

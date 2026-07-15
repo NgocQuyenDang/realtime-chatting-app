@@ -1,6 +1,6 @@
 package com.example.demo.service;
 
-import com.example.demo.dto.MessageHistoryResponse;
+import com.example.demo.dto.response.MessageHistoryResponse;
 import com.example.demo.entity.Conversation;
 import com.example.demo.entity.Message;
 import com.example.demo.repository.ConversationRepository;

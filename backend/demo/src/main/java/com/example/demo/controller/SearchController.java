@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -13,11 +14,10 @@ import java.util.stream.Collectors;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
-@RequestMapping
+@RequiredArgsConstructor
 public class SearchController {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
     @GetMapping("/home/search")
     public ResponseEntity<?> searchUsers(

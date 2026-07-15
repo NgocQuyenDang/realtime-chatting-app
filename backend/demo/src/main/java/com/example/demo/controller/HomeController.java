@@ -6,6 +6,7 @@ import com.example.demo.repository.ConversationMemberRepository;
 import com.example.demo.repository.MessageRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.service.ConversationService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -17,17 +18,10 @@ import java.util.Optional;
 
 @RestController
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
+@RequiredArgsConstructor
 public class HomeController {
-    @Autowired UserRepository userRepository;
-
-    @Autowired
-    ConversationService chatService;
-
-    @Autowired
-    MessageRepository messageRepository;
-
-    @Autowired
-    ConversationMemberRepository conversationMemberRepository;
+    private final UserRepository userRepository;
+    private final ConversationService conversationService;
 
     @GetMapping("/user-profile")
     public ResponseEntity<?> getUser(Authentication authentication) {
@@ -45,7 +39,7 @@ public class HomeController {
         );
     }
 
-    @PostMapping("/access")
+    @PostMapping("/start-conversation")
     public ResponseEntity<?> startConversation(@RequestBody Map<String, Long> request, Authentication authentication) {
         Optional<User> currentUser = userRepository.findByEmail(authentication.getName());
         Long currentUserId = currentUser.get().getId();
@@ -68,7 +62,7 @@ public class HomeController {
         }
 
         // Lấy phòng cũ hoặc tạo phòng mới
-        Long conversationId = chatService.getOrCreateConversation(currentUserId, targetUserId);
+        Long conversationId = conversationService.getOrCreateConversation(currentUserId, targetUserId);
 
         return ResponseEntity.ok(Map.of("conversationId", conversationId));
     }
@@ -81,7 +75,7 @@ public class HomeController {
         }
         Long currentUserId = currentUser.get().getId();
 
-        List<Map<String, Object>> conversations = chatService.getConversationsList(currentUserId);
+        List<Map<String, Object>> conversations = conversationService.getConversationsList(currentUserId);
 
         return ResponseEntity.ok(conversations);
     }

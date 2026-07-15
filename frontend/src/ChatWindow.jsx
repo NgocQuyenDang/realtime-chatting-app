@@ -92,7 +92,7 @@ function ChatWindow() {
             let targetUserId = null;
 
             if (user.fullname) {
-                const response = await axios.post("http://localhost:8080/access", {
+                const response = await axios.post("http://localhost:8080/start-conversation", {
                     targetUserId: user.id
                 });
                 conversationId = response.data.conversationId;
