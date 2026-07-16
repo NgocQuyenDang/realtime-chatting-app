@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import "./login.css";
 import axios from "axios";
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
+
 function Register() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -27,7 +29,7 @@ function Register() {
             return; // Dừng hàm lại nếu thiếu thông tin
         }
         try {
-            const response = await axios.post("http://localhost:8080/register", {
+            const response = await axios.post(`${BACKEND_URL}/register`, {
                 email: email,
                 password: password,
                 fullname: fullname,
@@ -47,7 +49,7 @@ function Register() {
             return; // Dừng hàm lại nếu thiếu OTP
         }
         try {
-            const response = await axios.post("http://localhost:8080/verify-otp", {
+            const response = await axios.post(`${BACKEND_URL}/verify-otp`, {
                 email: email,
                 otp: otp
             });

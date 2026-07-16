@@ -4,6 +4,7 @@ import axios from "axios";
 import "./login.css";
 
 axios.defaults.withCredentials = true;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
 
 function Login() {
     const [email, setEmail] = useState("");
@@ -20,7 +21,7 @@ function Login() {
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
-            const response = await axios.post("http://localhost:8080/login", {
+            const response = await axios.post(`${BACKEND_URL}/login`, {
                 email: email,
                 password: password
             });
@@ -43,7 +44,7 @@ function Login() {
             return;
         }
         try {
-            const response = await axios.post("http://localhost:8080/verify-otp", {
+            const response = await axios.post(`${BACKEND_URL}/verify-otp`, {
                 email: email,
                 otp: otp
             });
@@ -62,7 +63,7 @@ function Login() {
     const handleResendOtp = async (e) => {
         e.preventDefault(); // 🌟 Ngăn submit form ngoài ý muốn
         try {
-            const response = await axios.post("http://localhost:8080/resend-otp", { email: email });
+            const response = await axios.post(`${BACKEND_URL}/resend-otp`, { email: email });
             alert(response.data);
         } catch (error) {
             console.log(error);

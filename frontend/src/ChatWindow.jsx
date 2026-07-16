@@ -3,7 +3,7 @@ import "./ChatWindow.css";
 import axios from "axios";
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
-
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
 axios.defaults.withCredentials = true;
 
 function ChatWindow() {
@@ -33,7 +33,7 @@ function ChatWindow() {
         const fetchUserDataAndConversations = async () => {
             try {
                 //Lấy profile user
-                const profileResponse = await axios.get("http://localhost:8080/user-profile");
+                const profileResponse = await axios.get(`${BACKEND_URL}/user-profile`);
                 setCurrentUser({
                     fullname: profileResponse.data.fullname,
                     email: profileResponse.data.email,
@@ -41,7 +41,7 @@ function ChatWindow() {
                 setCurrentUserId(Number(profileResponse.data.id));
 
                 // API LẤY DANH SÁCH LỊCH SỬ CHAT
-                const convResponse = await axios.get("http://localhost:8080/my-conversations");
+                const convResponse = await axios.get(`${BACKEND_URL}/my-conversations`);
 
                 // Map dữ liệu từ Backend trả về sao cho khớp với các trường hiển thị của cột bên trái
                 const formattedConversations = convResponse.data.map(conv => ({
@@ -77,7 +77,7 @@ function ChatWindow() {
     // Hàm gọi API chạy ngầm
     const triggerApiSearch = async (text) => {
         try {
-            const response = await axios.get(`http://localhost:8080/home/search?keyword=${text}`);
+            const response = await axios.get(`${BACKEND_URL}/home/search?keyword=${text}`);
             setSearchResults(response.data);
         } catch (error) {
             console.error("Lỗi khi kết nối API tìm kiếm:", error);
@@ -92,7 +92,7 @@ function ChatWindow() {
             let targetUserId = null;
 
             if (user.fullname) {
-                const response = await axios.post("http://localhost:8080/start-conversation", {
+                const response = await axios.post(`${BACKEND_URL}/start-conversation`, {
                     targetUserId: user.id
                 });
                 conversationId = response.data.conversationId;
@@ -106,7 +106,7 @@ function ChatWindow() {
             );
 
             // Gọi API lấy lịch sử nhắn tin bằng conversationId đã xác định ở trên
-            const msgHistory = await axios.get(`http://localhost:8080/chat-history?conversationId=${conversationId}`);
+            const msgHistory = await axios.get(`${BACKEND_URL}/chat-history?conversationId=${conversationId}`);
 
             const formattedMessages = msgHistory.data.map(msg => ({
                     id : msg.id,
@@ -151,7 +151,7 @@ function ChatWindow() {
     useEffect(() => {
         if (!selectedRoom) return;
 
-        const socket = new SockJS('http://localhost:8080/ws-chat');
+        const socket = new SockJS(`${BACKEND_URL}/ws-chat`);
         const client = Stomp.over(socket);
 
         client.connect({}, () => {
