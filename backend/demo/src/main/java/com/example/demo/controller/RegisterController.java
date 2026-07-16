@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Random;
 
 @RestController
-@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 @RequiredArgsConstructor
 public class RegisterController {
     private final RegisterService registerService;
