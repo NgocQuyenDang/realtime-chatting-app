@@ -33,7 +33,7 @@ public class LogInController {
 
         Cookie cookie = new Cookie("accessToken", token);
         cookie.setHttpOnly(true);  // Khóa không cho Javascript ở React đọc chuỗi này
-        cookie.setSecure(false);
+        cookie.setSecure(true);
         cookie.setPath("/");
         cookie.setMaxAge(24 * 60 * 60);
 

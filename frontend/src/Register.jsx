@@ -54,7 +54,7 @@ function Register() {
                 otp: otp
             });
             alert(response.data);
-            navigate("/home");
+            navigate("/login");
         } catch (error) {
             console.error(error);
             alert("Mã OTP không hợp lệ");
