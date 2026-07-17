@@ -28,7 +28,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws-chat")
-                .setAllowedOrigins("http://localhost:5173")
+                .setAllowedOriginPatterns(
+                        "http://localhost:5173",
+                        "https://cavalry-divided-unselfish.ngrok-free.dev",
+                        "https://chat-psi-indol-14.vercel.app"
+                )
                 .addInterceptors(new HandshakeInterceptor() {
                     @Override
                     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,

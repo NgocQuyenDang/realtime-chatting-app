@@ -47,7 +47,7 @@ public class SecurityConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "https://gochat-zeta.vercel.app"));
+        configuration.setAllowedOrigins(List.of("http://localhost:5173", "https://chat-psi-indol-14.vercel.app", "https://cavalry-divided-unselfish.ngrok-free.dev"));
 
         configuration.setAllowedMethods(List.of(
                 "GET",

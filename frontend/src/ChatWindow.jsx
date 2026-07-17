@@ -1,61 +1,59 @@
-import {useEffect, useRef, useState} from "react";
+import { useEffect, useRef, useState } from "react";
 import "./ChatWindow.css";
 import axios from "axios";
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
+
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8080";
 axios.defaults.withCredentials = true;
 
 function ChatWindow() {
     useEffect(() => {
         document.title = "GoChat";
-    }, [])
-    // Thông tin người dùng đang đăng nhập)
+    }, []);
+
+    // --- CÁC STATE QUẢN LÝ ---
     const [currentUser, setCurrentUser] = useState({
+        id: null, // Lưu ID trực tiếp ở đây để quản lý đồng bộ
         fullname: "Đang tải...",
         email: "..."
     });
 
-    // --- CÁC STATE QUẢN LÝ ---
-    const [currentUserId, setCurrentUserId] = useState(currentUser.id);
     const [messages, setMessages] = useState([]);
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [messageInput, setMessageInput] = useState("");
     const [conversations, setConversations] = useState([]);
 
-    //State để quản lý từ khóa tìm kiếm và kết quả tìm kiếm
     const [searchKeyword, setSearchKeyword] = useState("");
     const [searchResults, setSearchResults] = useState([]);
 
-    let stompClient = useRef(null);
+    const stompClient = useRef(null);
+    const subscriptionRef = useRef(null); // Ref để quản lý lượt subscribe hiện tại
 
+    // 1. Fetch dữ liệu User hiện tại & Danh sách phòng chat khi load trang
     useEffect(() => {
         const fetchUserDataAndConversations = async () => {
             try {
-                //Lấy profile user
                 const profileResponse = await axios.get(`${BACKEND_URL}/user-profile`);
-                setCurrentUser({
+                const userObj = {
+                    id: Number(profileResponse.data.id),
                     fullname: profileResponse.data.fullname,
                     email: profileResponse.data.email,
-                });
-                setCurrentUserId(Number(profileResponse.data.id));
+                };
+                setCurrentUser(userObj);
 
-                // API LẤY DANH SÁCH LỊCH SỬ CHAT
                 const convResponse = await axios.get(`${BACKEND_URL}/my-conversations`);
-
-                // Map dữ liệu từ Backend trả về sao cho khớp với các trường hiển thị của cột bên trái
                 const formattedConversations = convResponse.data.map(conv => ({
-                    conversationId: conv.conversationId, // ID của phòng chat
-                    targetUserName: conv.conversationName,         // Tên người kia
+                    conversationId: conv.conversationId,
+                    targetUserName: conv.conversationName,
                     lastMsg: conv.lastMsg || "Chưa có tin nhắn nào",
                     isUnread: false
                 }));
 
-                // Cập nhật vào state conversations để ra danh sách bên trái
                 setConversations(formattedConversations);
 
             } catch (error) {
-                console.log(error);
+                console.error(error);
                 alert("Vui lòng đăng nhập lại");
                 window.location.href = "/login";
             }
@@ -63,10 +61,105 @@ function ChatWindow() {
         fetchUserDataAndConversations();
     }, []);
 
+    // 2. Quản lý vòng đời kết nối WebSocket (Chỉ kết nối DUY NHẤT 1 lần khi có currentUser.id)
+    useEffect(() => {
+        if (!currentUser.id) return;
+
+        const socket = new SockJS(`${BACKEND_URL}/ws-chat`);
+        const client = Stomp.over(socket);
+
+        // Tắt log debug chi tiết của Stomp để tránh làm rác màn hình console f12
+        client.debug = null;
+
+        client.connect({}, () => {
+            console.log("WebSocket connected successfully!");
+            stompClient.current = client;
+
+            // Nếu đang chọn sẵn phòng nào thì tự động subscribe vào phòng đó ngay
+            if (selectedRoom) {
+                subscribeToRoom(selectedRoom.id);
+            }
+        }, (err) => {
+            console.error("WebSocket connection error:", err);
+        });
+
+        return () => {
+            if (stompClient.current) {
+                stompClient.current.disconnect(() => {
+                    console.log("WebSocket disconnected.");
+                });
+            }
+        };
+    }, [currentUser.id]); // Chạy lại khi thông tin người dùng được lấy thành công
+
+    // 3. Hàm subscribe vào một phòng chat cụ thể (gọi mỗi khi selectedRoom thay đổi)
+    const subscribeToRoom = (roomId) => {
+        if (!stompClient.current || !stompClient.current.connected) return;
+
+        // Hủy đăng ký phòng cũ trước khi vào phòng mới
+        if (subscriptionRef.current) {
+            subscriptionRef.current.unsubscribe();
+        }
+
+        // Đăng ký phòng mới
+        subscriptionRef.current = stompClient.current.subscribe(`/topic/room/${roomId}`, (response) => {
+            const rawMsg = JSON.parse(response.body);
+
+            const newIncomingMsg = {
+                id: rawMsg.id,
+                senderId: Number(rawMsg.senderId),
+                text: rawMsg.text,
+                time: rawMsg.time
+            };
+
+            // 1. Cập nhật tin nhắn vào khung chat bên phải
+            setMessages((prev) => [...prev, newIncomingMsg]);
+
+            // 2. Cập nhật và đẩy phòng chat lên đầu danh sách bên trái
+            setConversations((prevConversations) => {
+                const existingIndex = prevConversations.findIndex(c => c.conversationId === roomId);
+                let updatedConversations = [...prevConversations];
+
+                // Xác định tin nhắn này có phải của người khác gửi đến không
+                const isFromOther = Number(rawMsg.senderId) !== Number(currentUser.id);
+
+                if (existingIndex !== -1) {
+                    const targetConv = { ...updatedConversations[existingIndex] };
+                    targetConv.lastMsg = rawMsg.text;
+
+                    // Nếu người khác gửi tới, đánh dấu chưa đọc (isUnread = true)
+                    if (isFromOther) {
+                        targetConv.isUnread = true;
+                    }
+
+                    updatedConversations.splice(existingIndex, 1);
+                    updatedConversations.unshift(targetConv);
+                } else {
+                    const newConv = {
+                        conversationId: roomId,
+                        targetUserName: selectedRoom?.name || "Người dùng",
+                        lastMsg: rawMsg.text,
+                        isUnread: isFromOther
+                    };
+                    updatedConversations.unshift(newConv);
+                }
+
+                // Sắp xếp: Ưu tiên phòng chưa đọc lên trên, hoặc cứ để phòng mới nhắn lên đầu
+                return updatedConversations.sort((a, b) => b.isUnread - a.isUnread);
+            });
+        });
+    };
+
+    // 4. Lắng nghe sự kiện đổi phòng chat để cập nhật Subscribe đường truyền
+    useEffect(() => {
+        if (selectedRoom && stompClient.current && stompClient.current.connected) {
+            subscribeToRoom(selectedRoom.id);
+        }
+    }, [selectedRoom]);
+
     // Hàm xử lý gõ chữ tìm kiếm user
     const handleSearch = (text) => {
         setSearchKeyword(text);
-
         if (!text.trim()) {
             setSearchResults([]);
             return;
@@ -84,7 +177,6 @@ function ChatWindow() {
         }
     };
 
-    // Hàm đổi giao diện hộp chat khi bấm chọn người dùng
     // Hàm đổi giao diện hộp chat khi bấm chọn người dùng hoặc phòng chat cũ
     const handleSelectUser = async (user) => {
         try {
@@ -101,18 +193,19 @@ function ChatWindow() {
                 conversationId = user.conversationId;
                 targetUserId = user.targetUserId || null;
             }
+
+            // Khi bấm vào phòng, tắt ngay thông báo đỏ (chưa đọc) của phòng đó
             setConversations(prev =>
                 prev.map(c => c.conversationId === conversationId ? { ...c, isUnread: false } : c)
             );
 
-            // Gọi API lấy lịch sử nhắn tin bằng conversationId đã xác định ở trên
+            // Gọi API lấy lịch sử nhắn tin
             const msgHistory = await axios.get(`${BACKEND_URL}/chat-history?conversationId=${conversationId}`);
-
             const formattedMessages = msgHistory.data.map(msg => ({
-                    id : msg.id,
-                    senderId: Number(msg.senderId),
-                    text : msg.content,
-                    time: msg.time
+                id: msg.id,
+                senderId: Number(msg.senderId),
+                text: msg.content,
+                time: msg.time
             }));
 
             const roomInfo = {
@@ -124,7 +217,7 @@ function ChatWindow() {
             setSelectedRoom(roomInfo);
             setMessages(formattedMessages);
             setMessageInput("");
-            setSearchKeyword(""); // Bấm xong thì xóa thanh tìm kiếm đi cho gọn
+            setSearchKeyword("");
             setSearchResults([]);
 
         } catch (error) {
@@ -138,84 +231,19 @@ function ChatWindow() {
     };
 
     const handleSendMessage = async () => {
-        if (!messageInput.trim() || !selectedRoom) return;
+        if (!messageInput.trim() || !selectedRoom || !stompClient.current) return;
 
         const messagePayload = {
-            content : messageInput.trim()
+            content: messageInput.trim()
         };
         stompClient.current.send(`/app/chat/${selectedRoom.id}`, {}, JSON.stringify(messagePayload));
-
         setMessageInput("");
     };
 
-    useEffect(() => {
-        if (!selectedRoom) return;
-
-        const socket = new SockJS(`${BACKEND_URL}/ws-chat`);
-        const client = Stomp.over(socket);
-
-        client.connect({}, () => {
-            // 2. Lắng nghe đường truyền riêng của phòng chat này
-            client.subscribe(`/topic/room/${selectedRoom.id}`, (response) => {
-                const rawMsg = JSON.parse(response.body);
-
-                const newIncomingMsg = {
-                    id: rawMsg.id,
-                    senderId: rawMsg.senderId,
-                    text: rawMsg.text,
-                    time: rawMsg.time
-                };
-
-                setMessages((prev) => [...prev, newIncomingMsg]);
-                setConversations((prevConversations) => {
-                    // Tìm xem phòng này đã có trong danh sách bên trái chưa
-                    const existingIndex = prevConversations.findIndex(c => c.conversationId === selectedRoom.id);
-                    let updatedConversations = [...prevConversations];
-
-                    // Kiểm tra xem tin nhắn này có phải của người khác gửi đến hay không
-                    const isFromOther = rawMsg.senderId !== currentUserId;
-
-                    if (existingIndex !== -1) {
-                        // Nếu phòng đã tồn tại sẵn bên trái
-                        const targetConv = { ...updatedConversations[existingIndex] };
-                        targetConv.lastMsg = rawMsg.text; // Cập nhật tin nhắn mới nhất
-
-                        // Nếu người gửi là người khác, chuyển trạng thái chưa đọc thành true
-                        if (isFromOther) {
-                            targetConv.isUnread = true;
-                        }
-
-                        // Xóa khỏi vị trí cũ và đẩy lên đầu mảng
-                        updatedConversations.splice(existingIndex, 1);
-                        updatedConversations.unshift(targetConv);
-                    } else {
-                        // Nếu đây là cuộc trò chuyện mới
-                        const newConv = {
-                            conversationId: selectedRoom.id,
-                            targetUserName: selectedRoom.name,
-                            lastMsg: rawMsg.text,
-                            isUnread: isFromOther // Nếu người khác gửi tin đầu tiên thì báo đỏ luôn
-                        };
-                        updatedConversations.unshift(newConv);
-                    }
-                    // Phòng nào chưa đọc xếp lên trên cùng
-                    return updatedConversations.sort((a, b) => b.isUnread - a.isUnread);
-
-                })
-            });
-        });
-        stompClient.current = client;
-        return () => {
-            if (stompClient.current) stompClient.current.disconnect();
-        };
-    }, [selectedRoom]);
-
     return (
         <div className="chat-app-wrapper">
-
             {/* ====== CỘT 1: THANH LỊCH SỬ USER & TÌM KIẾM BÊN TRÁI ====== */}
             <aside className="chat-sidebar">
-                {/* 1. Hiển thị User hiện tại trên cùng */}
                 <div className="sidebar-current-user">
                     <div className="current-user-info">
                         <h4>{currentUser.fullname}</h4>
@@ -223,7 +251,6 @@ function ChatWindow() {
                     </div>
                 </div>
 
-                {/*THANH TÌM KIẾM*/}
                 <div className="chat-search-container">
                     <div className="search-input-wrapper">
                         <input
@@ -233,12 +260,9 @@ function ChatWindow() {
                             placeholder="🔍 Tìm kiếm bạn bè mới..."
                             autoComplete="off"
                             value={searchKeyword}
-                            onChange={(e) => {
-                                handleSearch(e.target.value);
-                            }}
+                            onChange={(e) => handleSearch(e.target.value)}
                         />
                     </div>
-                    {/* Kết quả tìm kiếm thả xuống (Dropdown) */}
                     {searchKeyword && (
                         <div className="search-dropdown">
                             {searchResults.length > 0 ? (
@@ -257,12 +281,11 @@ function ChatWindow() {
                     )}
                 </div>
 
-                {/* 3. Danh sách các cuộc hội thoại lịch sử */}
                 <div className="conversations-list">
                     {conversations.map(chat => (
                         <div
                             key={chat.conversationId}
-                            className={`conversation-card ${selectedRoom?.id === chat.conversationId? "active" : ""}`}
+                            className={`conversation-card ${selectedRoom?.id === chat.conversationId ? "active" : ""}`}
                             onClick={() => handleSelectUser(chat)}
                         >
                             <div className="card-body">
@@ -288,7 +311,7 @@ function ChatWindow() {
                         <div className="chat-messages-container">
                             {messages.length > 0 ? (
                                 messages.map((msg) => {
-                                    const isMe = msg.senderId === currentUserId;
+                                    const isMe = Number(msg.senderId) === Number(currentUser.id);
                                     return (
                                         <div key={msg.id} className={`message-wrapper ${isMe ? "me" : "other"}`}>
                                             <div className="message-block">
@@ -327,7 +350,6 @@ function ChatWindow() {
                     </div>
                 )}
             </main>
-
         </div>
     );
 }

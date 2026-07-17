@@ -121,16 +121,9 @@
 
 <h1>GoChat - Real-time Chatting Application</h1>
 
-<!--<p>-->
-<!--    <b>Demo URL:</b>-->
-<!--    <a href="https://cattle-avatar-anguished.ngrok-free.dev/login" target="_blank">-->
-<!--        https://cattle-avatar-anguished.ngrok-free.dev/login-->
-<!--    </a>-->
-<!--</p>-->
-
 <h2>Brief Description</h2>
 <p>
-    A full-stack web application designed for instant messaging and real-time collaboration.<br>
+    A full-stack web application designed for instant messaging and real-time collaboration.
 </p>
 
 <h2>Tech Stack</h2>
@@ -143,25 +136,20 @@
 
 <h2>System Architecture</h2>
 <ul>
-    <li>RESTful API for historical message queries and authentication handling</li>
+    <li>RESTful API for history message queries, user profiles, and authentication handling</li>
     <li>WebSocket Connection Upgrade for persistent full-duplex client-server pipeline</li>
-    <li>Chat / Broker Service to:
+    <li>Chat Broker Service to:
         <ul>
-            <li>Parse real-time network payloads dynamically</li>
-            <li>Dispatch text packets safely to specific active conversation nodes</li>
-            <li>Broadcast online states and typing triggers instantly</li>
+            <li>Parse real-time network payloads dynamically via STOMP protocol</li>
+            <li>Dispatch chat packets safely to specific active conversation nodes</li>
+            <li>Broadcast message indicators and update unread message status instantly</li>
         </ul>
     </li>
 </ul>
 
 <h2>Core Features & Screenshots</h2>
 
-<h3>Login Page</h3>
-<ul>
-    <li>Secure authentication pipeline verifying account data</li>
-    <li>Passwords safely computed via unidirectional cryptographic hashing (BCrypt)</li>
-
-</ul>
+<h3>Login & Authentication Page</h3>
 <details>
     <summary>📸 View Login Page</summary>
     <div class="screenshot-container">
@@ -171,82 +159,51 @@
 
 <hr>
 
-<h3>Dashboard & Channel Workspace</h3>
-<ul>
-    <li>Dynamic landing page providing overview of total active chat interactions</li>
-    <li>Clean user experience keeping chat streams clear and responsive</li>
-</ul>
+<h3>Main Chat Dashboard</h3>
 <details>
     <summary>📸 View Dashboard</summary>
     <div class="screenshot-container">
-        <img src="screenshots/dashboard.png" alt="Workspace Dashboard" onclick="zoomImage(this)">
+        <img src="screenshots/home.png" alt="Workspace Dashboard" onclick="zoomImage(this)">
     </div>
 </details>
 
 <hr>
 
-<h3>Conversation Discovery (Search User)</h3>
-<ul>
-    <li>Query system to dynamically find and initialize peer links</li>
-    <li>Instant creation of private two-party communications</li>
-    <li>Dedicated admin dashboards to manage channels, block malicious entities, or monitor platform telemetry</li>
-</ul>
+<h3>User Discovery & Contact Search</h3>
 <details>
-    <summary>📸 Problem Page - Admin View</summary>
+    <summary>📸 View Search Mechanism</summary>
     <div class="screenshot-container">
-        <img src="screenshots/problem-page-admin-view.png" alt="Management Portal" onclick="zoomImage(this)">
-    </div>
-</details>
-<details>
-    <summary>📸 Add Problem Page - Admin View</summary>
-    <div class="screenshot-container">
-        <img src="screenshots/add-problem-page.png" alt="Room Creation Tool" onclick="zoomImage(this)">
-    </div>
-</details>
-<details>
-    <summary>📸 Problem Page - Member View</summary>
-    <div class="screenshot-container">
-        <img src="screenshots/problem-page-member-view.png" alt="Member Discovery Interface" onclick="zoomImage(this)">
+        <img src="screenshots/search.png" alt="User Search Interface" onclick="zoomImage(this)">
     </div>
 </details>
 
 <hr>
 
-<h3>Chat Room & Code/Text Editor</h3>
+<h3>Active Chat Window</h3>
 <ul>
-    <li>Dual panel combining rich messaging features alongside custom shared workspaces</li>
-    <li>Instant routing pipelines conveying messages directly to sub-topic routes</li>
+    <li>Dual-panel interface showing active chat list on the left and dedicated content stream on the right</li>
+    <li>Instant routing pipelines conveying typed messages directly to isolated sub-topic WebSocket paths</li>
+    <li>Pressing 'Enter' or clicking the rocket button triggers instant data dispatching</li>
 </ul>
 <details>
-    <summary>📸 View Code Editor</summary>
+    <summary>📸 View Chat Room</summary>
     <div class="screenshot-container">
-        <img src="screenshots/code-editor.png" alt="Active Chat Room and Editor" onclick="zoomImage(this)">
+        <img src="screenshots/chat.png" alt="Active Chat Room Panel" onclick="zoomImage(this)">
     </div>
 </details>
 
 <hr>
 
-<h3>Message Status Architecture</h3>
+<h3>Real-time Message Status & Alerts</h3>
 <ul>
-    <li>Rich interactive text processing confirming transmission delivery details</li>
-    <li>Identifies transmission states: Sent, Delivered, Network Dropped, or Invalid Payload</li>
+    <li>Interactive reactive states displaying real-time message changes</li>
+    <li>Visual badges indicating unread messages when incoming text packets arrive from inactive rooms</li>
+    <li>Graceful handling of server disconnects with automatic socket lifecycle cleanup</li>
 </ul>
 <details>
-    <summary>📸 Accepted Result</summary>
+    <summary>📸 View Message Status & Unread Badges</summary>
     <div class="screenshot-container">
-        <img src="screenshots/Accepted.png" alt="Message Successfully Sent" onclick="zoomImage(this)">
-    </div>
-</details>
-<details>
-    <summary>📸 Wrong Answer - With wrong test cases</summary>
-    <div class="screenshot-container">
-        <img src="screenshots/WA.png" alt="Transmission Failure State" onclick="zoomImage(this)">
-    </div>
-</details>
-<details>
-    <summary>📸 Time Limit Exceeded</summary>
-    <div class="screenshot-container">
-        <img src="screenshots/TLE.png" alt="WebSocket Timeout Event" onclick="zoomImage(this)">
+        <img src="screenshots/message-status.png" alt="Unread Alert Indicator" onclick="zoomImage(this)">
     </div>
 </details>
 
@@ -273,54 +230,53 @@
             <td>POST</td>
             <td><code>/login</code></td>
             <td>Public</td>
-            <td>Processes login claims and issues JWT tokens.</td>
+            <td>Processes login claims and issues HttpOnly session authentication.</td>
+        </tr>
+        <tr>
+            <td>POST</td>
+            <td><code>/register</code></td>
+            <td>Public</td>
+            <td>Registers new accounts and triggers initial validation tokens.</td>
+        </tr>
+        <tr>
+            <td>POST</td>
+            <td><code>/verify-otp</code></td>
+            <td>Public</td>
+            <td>Validates 6-digit email tokens to activate user accounts.</td>
+        </tr>
+        <tr>
+            <td>GET</td>
+            <td><code>/user-profile</code></td>
+            <td>Private</td>
+            <td>Fetches information details for the currently logged-in account.</td>
         </tr>
         <tr>
             <td>GET</td>
             <td><code>/my-conversations</code></td>
             <td>Private</td>
-            <td>Loads chat histories with last-message optimization models.</td>
+            <td>Loads user conversation cards with last-message preview optimization.</td>
         </tr>
         <tr>
             <td>GET</td>
             <td><code>/chat-history</code></td>
             <td>Private</td>
-            <td>Loads legacy messages for selected rooms.</td>
+            <td>Loads historical legacy messages for selected chat rooms.</td>
+        </tr>
+        <tr>
+            <td>POST</td>
+            <td><code>/start-conversation</code></td>
+            <td>Private</td>
+            <td>Initializes a new persistent chat node between two distinct users.</td>
         </tr>
         </tbody>
     </table>
 
     <h3>WebSocket Channels</h3>
     <ul>
-        <li><strong>Handshake URL:</strong> <code>http://localhost:8080/ws-chat</code></li>
-        <li><strong>Inbound Topic Feed:</strong> <code>/topic/room/{conversationId}</code></li>
-        <li><strong>Outbound Publish Route:</strong> <code>/app/chat/{conversationId}</code></li>
+        <li><strong>Handshake URL:</strong> <code>http://localhost:8080/ws-chat</code> (Supports fallback via SockJS)</li>
+        <li><strong>Inbound Topic Feed:</strong> <code>/topic/room/{conversationId}</code> (Client listens here for incoming texts)</li>
+        <li><strong>Outbound Publish Route:</strong> <code>/app/chat/{conversationId}</code> (Client sends payloads to this target)</li>
     </ul>
-</details>
-
-<h2>🚀 Usage & Local Installation Guide</h2>
-<p>Follow these quick sequential steps to bootstrap and set up the project locally:</p>
-
-<details>
-    <summary>📦 Click to expand installation instructions</summary>
-
-    <h3>1. Set Environment Variables</h3>
-    <p>Before launching the application server, export the required hidden key secrets in your operating system terminal window:</p>
-    <pre><code># On Linux / macOS systems
-export DB_USERNAME="your_database_user"
-export DB_PASSWORD="your_secure_password"
-export JWT_SECRET_KEY="SuperSecretRandomKeyGeneratedForProductionUseMustBeLong"
-
-# On Windows systems (Command Prompt)
-set DB_USERNAME=your_database_user
-set DB_PASSWORD=your_secure_password
-set JWT_SECRET_KEY=SuperSecretRandomKeyGeneratedForProductionUseMustBeLong</code></pre>
-
-    <h3>2. Compile and Start Backend Server</h3>
-    <p>Use Maven wrapper tool to compile source code assets and host the embedded server container:</p>
-    <pre><code>mvn clean install
-mvn spring-boot:run</code></pre>
-    <p>The core REST services engine will spin up on default local connection host endpoint: <code>http://localhost:8080</code></p>
 </details>
 
 <!-- Thành phần Modal ẩn phục vụ tính năng phóng to ảnh -->
