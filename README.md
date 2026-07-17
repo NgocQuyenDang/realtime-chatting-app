@@ -85,7 +85,7 @@ WebSocket provides a persistent connection between the client and server for rea
 <details>
 <summary>📸 View Chat Room</summary>
 
-![Chat](frontend/screenshots/chat.png)
+![Chat](frontend/screenshots/chatwindow.png)
 
 </details>
 
