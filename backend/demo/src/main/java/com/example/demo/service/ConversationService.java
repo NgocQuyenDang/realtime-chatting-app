@@ -9,7 +9,7 @@ import com.example.demo.repository.ConversationRepository;
 import com.example.demo.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.example.demo.dto.response.IConversationListResponse;
 import lombok.RequiredArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -53,16 +53,17 @@ public class ConversationService {
 
     @Transactional(readOnly = true)
     public List<ConversationListResponse> getConversationsList(Long userId) {
-        // Gọi repo lấy ra danh sách Interface
-        List<com.example.demo.dto.response.IConversationListResponse> rawList = memberRepository.findConversationsListByUserId(userId);
 
-        // Map ngược lại Class DTO cũ để trả về cho Controller
-        return rawList.stream().map(item -> new ConversationListResponse(
-                item.getConversationId(),
-                item.getName(),
-                item.getLastMsg(),
-                false
-        )).toList();
+        return memberRepository.findConversationsListByUserId(userId)
+                .stream()
+                .map(item -> new ConversationListResponse(
+                        item.getConversationId(),
+                        item.getPartnerName(),
+                        item.getLastMsg(),
+                        item.getIsGroup()
+                ))
+                .toList();
+
     }
 
     private ConversationMember createConversationMember(Conversation conversation, User user) {

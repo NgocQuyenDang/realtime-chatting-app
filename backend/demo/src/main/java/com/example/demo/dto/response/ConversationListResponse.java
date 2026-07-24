@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ConversationListResponse {
     private Long conversationId;
-    private String conversationName;
+    private String partnerName;
     private String lastMsg;
     private Boolean isGroup;
 }

@@ -30,7 +30,7 @@ function ChatWindow() {
     const stompClient = useRef(null);
     const subscriptionRef = useRef(null); // Ref để quản lý lượt subscribe hiện tại
 
-    // 1. Fetch dữ liệu User hiện tại & Danh sách phòng chat khi load trang
+    //Fetch dữ liệu User hiện tại & Danh sách phòng chat khi load trang
     useEffect(() => {
         const fetchUserDataAndConversations = async () => {
             try {
@@ -45,7 +45,7 @@ function ChatWindow() {
                 const convResponse = await axios.get(`${BACKEND_URL}/my-conversations`);
                 const formattedConversations = convResponse.data.map(conv => ({
                     conversationId: conv.conversationId,
-                    targetUserName: conv.conversationName,
+                    targetUserName: conv.partnerName,
                     lastMsg: conv.lastMsg || "Chưa có tin nhắn nào",
                     isUnread: false
                 }));
@@ -61,38 +61,7 @@ function ChatWindow() {
         fetchUserDataAndConversations();
     }, []);
 
-    // 2. Quản lý vòng đời kết nối WebSocket (Chỉ kết nối DUY NHẤT 1 lần khi có currentUser.id)
-    useEffect(() => {
-        if (!currentUser.id) return;
-
-        const socket = new SockJS(`${BACKEND_URL}/ws-chat`);
-        const client = Stomp.over(socket);
-
-        // Tắt log debug chi tiết của Stomp để tránh làm rác màn hình console f12
-        client.debug = null;
-
-        client.connect({}, () => {
-            console.log("WebSocket connected successfully!");
-            stompClient.current = client;
-
-            // Nếu đang chọn sẵn phòng nào thì tự động subscribe vào phòng đó ngay
-            if (selectedRoom) {
-                subscribeToRoom(selectedRoom.id);
-            }
-        }, (err) => {
-            console.error("WebSocket connection error:", err);
-        });
-
-        return () => {
-            if (stompClient.current) {
-                stompClient.current.disconnect(() => {
-                    console.log("WebSocket disconnected.");
-                });
-            }
-        };
-    }, [currentUser.id]); // Chạy lại khi thông tin người dùng được lấy thành công
-
-    // 3. Hàm subscribe vào một phòng chat cụ thể (gọi mỗi khi selectedRoom thay đổi)
+    // Hàm subscribe vào một phòng chat cụ thể (gọi mỗi khi selectedRoom thay đổi)
     const subscribeToRoom = (roomId) => {
         if (!stompClient.current || !stompClient.current.connected) return;
 
@@ -150,7 +119,39 @@ function ChatWindow() {
         });
     };
 
-    // 4. Lắng nghe sự kiện đổi phòng chat để cập nhật Subscribe đường truyền
+    // Quản lý vòng đời kết nối WebSocket (Chỉ kết nối DUY NHẤT 1 lần khi có currentUser.id)
+    useEffect(() => {
+        if (!currentUser.id) return;
+
+        const socket = new SockJS(`${BACKEND_URL}/ws-chat`);
+        const client = Stomp.over(socket);
+
+        // Tắt log debug chi tiết của Stomp để tránh làm rác màn hình console f12
+        client.debug = null;
+
+        client.connect({}, () => {
+            console.log("WebSocket connected successfully!");
+            stompClient.current = client;
+
+            // Nếu đang chọn sẵn phòng nào thì tự động subscribe vào phòng đó ngay
+            if (selectedRoom) {
+                subscribeToRoom(selectedRoom.id);
+            }
+        }, (err) => {
+            console.error("WebSocket connection error:", err);
+        });
+
+        return () => {
+            if (stompClient.current) {
+                stompClient.current.disconnect(() => {
+                    console.log("WebSocket disconnected.");
+                });
+            }
+        };
+    }, [currentUser.id]); // Chạy lại khi thông tin người dùng được lấy thành công
+
+
+    // Lắng nghe sự kiện đổi phòng chat để cập nhật Subscribe đường truyền
     useEffect(() => {
         if (selectedRoom && stompClient.current && stompClient.current.connected) {
             subscribeToRoom(selectedRoom.id);
